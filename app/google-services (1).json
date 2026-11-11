@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "685506114293",
+    "project_id": "aviatorbet261predictor",
+    "storage_bucket": "aviatorbet261predictor.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:685506114293:android:40cb88bfa9bac845558bbc",
+        "android_client_info": {
+          "package_name": "com.example.aviatorbet261predictor"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAyIITdXD7FDucQIONTMl84BFcVWOrkWN8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
