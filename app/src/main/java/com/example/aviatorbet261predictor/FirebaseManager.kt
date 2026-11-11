@@ -8,8 +8,9 @@ import com.google.firebase.database.ValueEventListener
 
 object FirebaseManager {
 
-    private val database =
-        FirebaseDatabase.getInstance().reference
+    private val database = FirebaseDatabase
+        .getInstance("https://aviatorbet261predictor-default-rtdb.firebaseio.com/")
+        .reference
 
     fun connect(
         site: String,
@@ -22,12 +23,8 @@ object FirebaseManager {
             .child(roomCode)
 
         room.child("status").setValue("CONNECTED")
-            .addOnSuccessListener {
-                onConnected(true)
-            }
-            .addOnFailureListener {
-                onConnected(false)
-            }
+            .addOnSuccessListener { onConnected(true) }
+            .addOnFailureListener { onConnected(false) }
     }
 
     fun sendResult(
@@ -40,8 +37,7 @@ object FirebaseManager {
             "timestamp" to System.currentTimeMillis()
         )
 
-        database
-            .child("rooms")
+        database.child("rooms")
             .child(site.lowercase())
             .child(roomCode)
             .child("latestResult")
@@ -54,22 +50,17 @@ object FirebaseManager {
         onResult: (Double) -> Unit
     ): ValueEventListener {
 
-        val reference = database
-            .child("rooms")
+        val reference = database.child("rooms")
             .child(site.lowercase())
             .child(roomCode)
             .child("latestResult")
 
         val listener = object : ValueEventListener {
-
             override fun onDataChange(snapshot: DataSnapshot) {
-                val multiplier =
-                    snapshot.child("multiplier")
-                        .getValue(Double::class.java)
+                val multiplier = snapshot.child("multiplier")
+                    .getValue(Double::class.java)
 
-                if (multiplier != null) {
-                    onResult(multiplier)
-                }
+                if (multiplier != null) onResult(multiplier)
             }
 
             override fun onCancelled(error: DatabaseError) {}
@@ -79,12 +70,8 @@ object FirebaseManager {
         return listener
     }
 
-    fun disconnect(
-        site: String,
-        roomCode: String
-    ) {
-        database
-            .child("rooms")
+    fun disconnect(site: String, roomCode: String) {
+        database.child("rooms")
             .child(site.lowercase())
             .child(roomCode)
             .child("status")
