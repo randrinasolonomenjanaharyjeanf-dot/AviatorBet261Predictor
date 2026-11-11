@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -13,125 +14,208 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
+private val Dark = Color(0xFF101014)
+private val Red = Color(0xFFED174C)
+private val CardColor = Color(0xFF202027)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            AviatorPredictorApp()
+            AviatorApp()
         }
     }
 }
 
 @Composable
-fun AviatorPredictorApp() {
-    var multiplier by remember { mutableStateOf("--.--x") }
-    var status by remember { mutableStateOf("READY TO ANALYZE") }
-    var history by remember { mutableStateOf("No results yet") }
+fun AviatorApp() {
+    var selectedSite by remember { mutableStateOf("") }
 
-    val background = Color(0xFF101014)
-    val red = Color(0xFFE91E50)
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = Dark
+    ) {
+        if (selectedSite.isEmpty()) {
+            HomeScreen(
+                onSelect = { selectedSite = it }
+            )
+        } else {
+            PredictorScreen(
+                site = selectedSite,
+                onBack = { selectedSite = "" }
+            )
+        }
+    }
+}
+
+@Composable
+fun HomeScreen(onSelect: (String) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(22.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("✈", color = Red, fontSize = 65.sp)
+
+        Text(
+            "AVIATOR PREDICTOR",
+            color = Red,
+            fontSize = 26.sp,
+            fontWeight = FontWeight.Black
+        )
+
+        Text(
+            "DUAL PLATFORM ANALYZER",
+            color = Color.LightGray,
+            fontSize = 12.sp
+        )
+
+        Spacer(Modifier.height(45.dp))
+
+        PlatformCard(
+            title = "AVIATOR BET261",
+            subtitle = "Predictor pour Bet261",
+            onClick = { onSelect("BET261") }
+        )
+
+        Spacer(Modifier.height(20.dp))
+
+        PlatformCard(
+            title = "AVIATOR 1WIN",
+            subtitle = "Predictor pour 1Win",
+            onClick = { onSelect("1WIN") }
+        )
+
+        Spacer(Modifier.height(45.dp))
+
+        Text(
+            "LIVE DATA • RNG • STATISTICS",
+            color = Color.Gray,
+            fontSize = 11.sp
+        )
+    }
+}
+
+@Composable
+fun PlatformCard(
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(CardColor, RoundedCornerShape(18.dp))
+            .clickable { onClick() }
+            .padding(22.dp)
+    ) {
+        Text(
+            title,
+            color = Color.White,
+            fontSize = 21.sp,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(Modifier.height(7.dp))
+
+        Text(subtitle, color = Color.LightGray)
+
+        Spacer(Modifier.height(15.dp))
+
+        Text(
+            "OPEN PREDICTOR  →",
+            color = Red,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+fun PredictorScreen(
+    site: String,
+    onBack: () -> Unit
+) {
+    var status by remember {
+        mutableStateOf("NOT CONNECTED")
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(background)
             .padding(22.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            "AVIATOR",
-            color = red,
-            fontSize = 34.sp,
-            fontWeight = FontWeight.Black
+            "✈",
+            color = Red,
+            fontSize = 65.sp
         )
 
         Text(
-            "PREDICTOR V1",
-            color = Color.White,
-            fontSize = 17.sp,
-            letterSpacing = 4.sp
+            "$site AVIATOR PREDICTOR",
+            color = Red,
+            fontSize = 23.sp,
+            fontWeight = FontWeight.Black
         )
 
         Spacer(Modifier.height(35.dp))
 
         Text(
-            "ESTIMATED MULTIPLIER",
-            color = Color.LightGray,
-            fontSize = 13.sp
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        Text(
-            multiplier,
-            color = red,
-            fontSize = 54.sp,
+            "--.--x",
+            color = Color.White,
+            fontSize = 55.sp,
             fontWeight = FontWeight.Bold
         )
-
-        Spacer(Modifier.height(20.dp))
 
         Text(
             status,
-            color = Color(0xFF4CAF50),
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold
+            color = Color.LightGray
         )
 
         Spacer(Modifier.height(30.dp))
 
         Button(
             onClick = {
-                multiplier = "N/A"
-                status = "WAITING FOR REAL GAME DATA"
+                status = "WAITING FOR DEVICE PAIRING"
             },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(58.dp),
+            modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(
-                containerColor = red
-            ),
-            shape = RoundedCornerShape(14.dp)
-        ) {
-            Text(
-                "GET PREDICTION",
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Bold
+                containerColor = Color(0xFF16A34A)
             )
+        ) {
+            Text("CONNECT")
         }
 
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(12.dp))
 
-        OutlinedButton(
+        Button(
             onClick = {
-                status = "ANALYZER ACTIVATED"
+                status = "WAITING FOR REAL GAME DATA"
             },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(55.dp)
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Red
+            )
         ) {
-            Text("ACTIVATE ANALYZER")
+            Text("NEXT PREDICTION")
         }
 
         Spacer(Modifier.height(30.dp))
 
         Text(
-            "LIVE DATA • RNG • BET261",
+            "RNG • HISTORY • STATISTICS",
             color = Color.Gray,
-            fontSize = 12.sp
+            fontSize = 11.sp
         )
 
-        Spacer(Modifier.height(12.dp))
-
-        Text(
-            history,
-            color = Color.LightGray,
-            fontSize = 12.sp
-        )
+        TextButton(onClick = onBack) {
+            Text("← BACK TO HOME", color = Color.White)
+        }
     }
 }
