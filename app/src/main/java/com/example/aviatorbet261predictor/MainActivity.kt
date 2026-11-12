@@ -4,6 +4,7 @@ package com.example.aviatorbet261predictor
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.lifecycle.ViewModelProvider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,29 +28,40 @@ private val CardColor = Color(0xFF202027)
 private val Green = Color(0xFF16A34A)
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val roundViewModel =
+            ViewModelProvider(this)[RoundViewModel::class.java]
+
         setContent {
             MaterialTheme {
-                AviatorApp()
+                AviatorApp(roundViewModel)
             }
         }
     }
 }
 
 @Composable
-fun AviatorApp() {
-    var selectedSite by remember { mutableStateOf("") }
+fun AviatorApp(viewModel: RoundViewModel) {
+
+    var selectedSite by remember {
+        mutableStateOf("")
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Dark
     ) {
         if (selectedSite.isEmpty()) {
-            HomeScreen { selectedSite = it }
+            HomeScreen {
+                selectedSite = it
+            }
         } else {
             AnalyzerScreen(
                 site = selectedSite,
+                viewModel = viewModel,
                 onBack = { selectedSite = "" }
             )
         }
@@ -58,6 +70,7 @@ fun AviatorApp() {
 
 @Composable
 fun HomeScreen(onSelect: (String) -> Unit) {
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -85,14 +98,18 @@ fun HomeScreen(onSelect: (String) -> Unit) {
         PlatformCard(
             "AVIATOR BET261",
             "Open Bet261 analyzer"
-        ) { onSelect("BET261") }
+        ) {
+            onSelect("BET261")
+        }
 
         Spacer(Modifier.height(18.dp))
 
         PlatformCard(
             "AVIATOR 1WIN",
             "Open 1Win analyzer"
-        ) { onSelect("1WIN") }
+        ) {
+            onSelect("1WIN")
+        }
     }
 }
 
@@ -117,9 +134,13 @@ fun PlatformCard(
                 fontSize = 21.sp,
                 fontWeight = FontWeight.Bold
             )
+
             Spacer(Modifier.height(7.dp))
+
             Text(subtitle, color = Color.LightGray)
+
             Spacer(Modifier.height(12.dp))
+
             Text(
                 "OPEN ANALYZER  →",
                 color = Red,
@@ -132,24 +153,24 @@ fun PlatformCard(
 @Composable
 fun AnalyzerScreen(
     site: String,
+    viewModel: RoundViewModel,
     onBack: () -> Unit
 ) {
     var input by remember { mutableStateOf("") }
     var analysis by remember {
-        mutableStateOf("Ampidiro aloha ny vokatra efa nivoaka.")
+        mutableStateOf("Ampidiro ny vokatra efa nivoaka.")
     }
 
-    val history = remember {
-        mutableStateListOf<Double>()
+    val history by viewModel.rounds.collectAsState()
+
+    LaunchedEffect(site) {
+        viewModel.loadRounds(site)
     }
 
-    val average = if (history.isNotEmpty()) {
-        history.average()
-    } else {
-        0.0
-    }
+    val values = history.map { it.multiplier }
+    val sorted = values.sorted()
 
-    val sorted = history.sorted()
+    val average = values.average()
 
     val median = when {
         sorted.isEmpty() -> 0.0
@@ -159,8 +180,8 @@ fun AnalyzerScreen(
         else -> sorted[sorted.size / 2]
     }
 
-    val low = history.count { it < 2.0 }
-    val high = history.count { it >= 2.0 }
+    val low = values.count { it < 2.0 }
+    val high = values.count { it >= 2.0 }
 
     Column(
         modifier = Modifier
@@ -168,6 +189,7 @@ fun AnalyzerScreen(
             .background(Dark)
             .padding(18.dp)
     ) {
+
         TextButton(onClick = onBack) {
             Text("← BACK", color = Color.White)
         }
@@ -185,7 +207,7 @@ fun AnalyzerScreen(
             fontSize = 13.sp
         )
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(18.dp))
 
         Card(
             colors = CardDefaults.cardColors(
@@ -194,9 +216,8 @@ fun AnalyzerScreen(
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
+            Column(Modifier.padding(16.dp)) {
+
                 Text(
                     "ADD REAL ROUND RESULT",
                     color = Color.White,
@@ -209,7 +230,9 @@ fun AnalyzerScreen(
                     value = input,
                     onValueChange = { input = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Multiplier (ex: 2.45x)") },
+                    label = {
+                        Text("Multiplier (ex: 2.45x)")
+                    },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Decimal
@@ -228,25 +251,19 @@ fun AnalyzerScreen(
 
                 Button(
                     onClick = {
-                        val value = input
-                            .trim()
+                        val value = input.trim()
                             .replace(",", ".")
                             .removeSuffix("x")
                             .toDoubleOrNull()
 
-                        if (value != null &&
+                        if (
+                            value != null &&
                             value.isFinite() &&
                             value >= 1.0
                         ) {
-                            history.add(value)
+                            viewModel.addRound(site, value)
                             input = ""
-                            analysis = "Vokatra voatahiry: ${
-                                String.format(
-                                    Locale.US,
-                                    "%.2fx",
-                                    value
-                                )
-                            }"
+                            analysis = "Vokatra nampidirina tao amin'ny historique."
                         } else {
                             analysis =
                                 "Ampidiro multiplier valide, ohatra 2.45"
@@ -262,7 +279,7 @@ fun AnalyzerScreen(
             }
         }
 
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(16.dp))
 
         Text(
             "STATISTICS",
@@ -282,9 +299,10 @@ fun AnalyzerScreen(
                 history.size.toString(),
                 Modifier.weight(1f)
             )
+
             StatCard(
                 "AVERAGE",
-                if (history.isEmpty()) "--"
+                if (values.isEmpty()) "--"
                 else String.format(Locale.US, "%.2fx", average),
                 Modifier.weight(1f)
             )
@@ -298,10 +316,11 @@ fun AnalyzerScreen(
         ) {
             StatCard(
                 "MEDIAN",
-                if (history.isEmpty()) "--"
+                if (values.isEmpty()) "--"
                 else String.format(Locale.US, "%.2fx", median),
                 Modifier.weight(1f)
             )
+
             StatCard(
                 "LOW / HIGH",
                 "$low / $high",
@@ -309,20 +328,19 @@ fun AnalyzerScreen(
             )
         }
 
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(14.dp))
 
         Button(
             onClick = {
-                analysis = if (history.isEmpty()) {
+                analysis = if (values.isEmpty()) {
                     "Tsy mbola misy historique azo dinihina."
                 } else {
-                    "Analyse de ${history.size} rounds vita. " +
+                    "Analyse de ${values.size} rounds. " +
                     "Moyenne: ${
                         String.format(Locale.US, "%.2fx", average)
                     }. Médiane: ${
                         String.format(Locale.US, "%.2fx", median)
-                    }. Ireo dia statistika taloha ihany, " +
-                    "fa tsy prédiction azo antoka."
+                    }. Statistiques historiques uniquement."
                 }
             },
             modifier = Modifier.fillMaxWidth(),
@@ -333,7 +351,7 @@ fun AnalyzerScreen(
             Text("ANALYZE NEXT")
         }
 
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(8.dp))
 
         Text(
             analysis,
@@ -341,7 +359,7 @@ fun AnalyzerScreen(
             fontSize = 13.sp
         )
 
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(12.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -355,7 +373,7 @@ fun AnalyzerScreen(
 
             TextButton(
                 onClick = {
-                    history.clear()
+                    viewModel.clearHistory(site)
                     analysis = "Historique voafafa."
                 }
             ) {
@@ -366,15 +384,36 @@ fun AnalyzerScreen(
         LazyColumn(
             modifier = Modifier.weight(1f)
         ) {
-            items(history.toList().asReversed()) { value ->
-                Text(
-                    String.format(Locale.US, "%.2fx", value),
-                    color = if (value >= 2.0) Green
-                    else Color.White,
+            items(
+                items = history,
+                key = { it.id }
+            ) { round ->
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 7.dp)
-                )
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        "Round #${round.id}",
+                        color = Color.LightGray
+                    )
+
+                    Text(
+                        String.format(
+                            Locale.US,
+                            "%.2fx",
+                            round.multiplier
+                        ),
+                        color = if (round.multiplier >= 2.0) {
+                            Green
+                        } else {
+                            Color.White
+                        },
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
                 HorizontalDivider(color = CardColor)
             }
         }
@@ -400,125 +439,21 @@ fun StatCard(
         ),
         shape = RoundedCornerShape(14.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(14.dp)
-        ) {
+        Column(Modifier.padding(14.dp)) {
             Text(
                 title,
                 color = Color.LightGray,
                 fontSize = 11.sp
             )
+
             Spacer(Modifier.height(7.dp))
+
             Text(
                 value,
                 color = Color.White,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
-        }
-    }
-}
-roomCode,
-                                                "Android device"
-                                            ) { registered, deviceError ->
-
-                                                connected = registered
-                                                message = if (registered) {
-                                                    "ROOM CONNECTED"
-                                                } else {
-                                                    deviceError ?: "Device registration failed"
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("JOIN ROOM")
-                    }
-
-                    Spacer(Modifier.height(20.dp))
-
-                    Text(
-                        "CONNECTED DEVICES: $deviceCount",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Text(
-                        message,
-                        color = Color.LightGray,
-                        fontSize = 12.sp
-                    )
-
-                    Spacer(Modifier.height(20.dp))
-
-                    OutlinedTextField(
-                        value = multiplierInput,
-                        onValueChange = {
-                            multiplierInput = it
-                        },
-                        label = { Text("Observed multiplier (e.g. 2.45)") },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Decimal
-                        ),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Button(
-                        onClick = {
-                            val value = multiplierInput
-                                .replace(',', '.')
-                                .toDoubleOrNull()
-
-                            if (!connected) {
-                                message = "Connect to a room first"
-                            } else if (value == null || !value.isFinite() || value < 1.0) {
-                                message = "Enter a valid multiplier"
-                            } else {
-                                FirebaseManager.sendResult(
-                                    selectedSite,
-                                    roomCode,
-                                    value
-                                )
-                                message = "Observed result sent"
-                                multiplierInput = ""
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Red
-                        )
-                    ) {
-                        Text("SEND OBSERVED RESULT")
-                    }
-
-                    Spacer(Modifier.weight(1f))
-
-                    TextButton(
-                        onClick = {
-                            DeviceManager.removeDevice(
-                                selectedSite,
-                                roomCode
-                            )
-                            connected = false
-                            selectedSite = ""
-                            roomCode = ""
-                            deviceCount = 0
-                            latestResult = "--.--x"
-                            message = "Disconnected"
-                        }
-                    ) {
-                        Text(
-                            "BACK TO HOME",
-                            color = Color.White
-                        )
-                    }
-                }
-            }
         }
     }
 }
