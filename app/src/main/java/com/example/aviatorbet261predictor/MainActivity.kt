@@ -6,6 +6,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
@@ -17,275 +19,406 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.firebase.database.ValueEventListener
+import java.util.Locale
 
 private val Dark = Color(0xFF101014)
 private val Red = Color(0xFFED174C)
 private val CardColor = Color(0xFF202027)
+private val Green = Color(0xFF16A34A)
 
 class MainActivity : ComponentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setContent {
-            AviatorApp()
+            MaterialTheme {
+                AviatorApp()
+            }
         }
     }
 }
 
 @Composable
 fun AviatorApp() {
-
     var selectedSite by remember { mutableStateOf("") }
-    var roomCode by remember { mutableStateOf("") }
-    var deviceCount by remember { mutableIntStateOf(0) }
-    var latestResult by remember { mutableStateOf("--.--x") }
-    var message by remember { mutableStateOf("Ready") }
-    var connected by remember { mutableStateOf(false) }
-    var multiplierInput by remember { mutableStateOf("") }
 
-    var deviceListener by remember {
-        mutableStateOf<ValueEventListener?>(null)
-    }
-
-    var resultListener by remember {
-        mutableStateOf<ValueEventListener?>(null)
-    }
-
-    val database = remember {
-        com.google.firebase.database.FirebaseDatabase
-            .getInstance(
-                "https://aviatorbet261predictor-default-rtdb.firebaseio.com/"
-            ).reference
-    }
-
-    DisposableEffect(selectedSite, roomCode, connected) {
-        if (connected && selectedSite.isNotEmpty() && roomCode.isNotEmpty()) {
-
-            deviceListener = DeviceManager.listenDevices(
-                selectedSite,
-                roomCode
-            ) {
-                deviceCount = it
-            }
-
-            resultListener = FirebaseManager.listenResults(
-                selectedSite,
-                roomCode
-            ) {
-                latestResult = String.format("%.2fx", it)
-            }
-        }
-
-        onDispose {
-            deviceListener?.let {
-                database.child("rooms")
-                    .child(selectedSite.lowercase())
-                    .child(roomCode)
-                    .child("devices")
-                    .removeEventListener(it)
-            }
-
-            resultListener?.let {
-                database.child("rooms")
-                    .child(selectedSite.lowercase())
-                    .child(roomCode)
-                    .child("latestResult")
-                    .removeEventListener(it)
-            }
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = Dark
+    ) {
+        if (selectedSite.isEmpty()) {
+            HomeScreen { selectedSite = it }
+        } else {
+            AnalyzerScreen(
+                site = selectedSite,
+                onBack = { selectedSite = "" }
+            )
         }
     }
+}
 
-    MaterialTheme {
+@Composable
+fun HomeScreen(onSelect: (String) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(22.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("✈", color = Red, fontSize = 65.sp)
 
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = Dark
+        Text(
+            "AVIATOR ANALYZER",
+            color = Red,
+            fontSize = 27.sp,
+            fontWeight = FontWeight.Black
+        )
+
+        Text(
+            "HISTORICAL DATA • RNG • STATISTICS",
+            color = Color.LightGray,
+            fontSize = 11.sp
+        )
+
+        Spacer(Modifier.height(45.dp))
+
+        PlatformCard(
+            "AVIATOR BET261",
+            "Open Bet261 analyzer"
+        ) { onSelect("BET261") }
+
+        Spacer(Modifier.height(18.dp))
+
+        PlatformCard(
+            "AVIATOR 1WIN",
+            "Open 1Win analyzer"
+        ) { onSelect("1WIN") }
+    }
+}
+
+@Composable
+fun PlatformCard(
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = CardColor
+        ),
+        shape = RoundedCornerShape(18.dp)
+    ) {
+        Column(Modifier.padding(22.dp)) {
+            Text(
+                title,
+                color = Color.White,
+                fontSize = 21.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(7.dp))
+            Text(subtitle, color = Color.LightGray)
+            Spacer(Modifier.height(12.dp))
+            Text(
+                "OPEN ANALYZER  →",
+                color = Red,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+fun AnalyzerScreen(
+    site: String,
+    onBack: () -> Unit
+) {
+    var input by remember { mutableStateOf("") }
+    var analysis by remember {
+        mutableStateOf("Ampidiro aloha ny vokatra efa nivoaka.")
+    }
+
+    val history = remember {
+        mutableStateListOf<Double>()
+    }
+
+    val average = if (history.isNotEmpty()) {
+        history.average()
+    } else {
+        0.0
+    }
+
+    val sorted = history.sorted()
+
+    val median = when {
+        sorted.isEmpty() -> 0.0
+        sorted.size % 2 == 0 ->
+            (sorted[sorted.size / 2 - 1] +
+             sorted[sorted.size / 2]) / 2.0
+        else -> sorted[sorted.size / 2]
+    }
+
+    val low = history.count { it < 2.0 }
+    val high = history.count { it >= 2.0 }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Dark)
+            .padding(18.dp)
+    ) {
+        TextButton(onClick = onBack) {
+            Text("← BACK", color = Color.White)
+        }
+
+        Text(
+            "$site AVIATOR ANALYZER",
+            color = Red,
+            fontSize = 23.sp,
+            fontWeight = FontWeight.Black
+        )
+
+        Text(
+            "Historical statistics",
+            color = Color.LightGray,
+            fontSize = 13.sp
+        )
+
+        Spacer(Modifier.height(20.dp))
+
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = CardColor
+            ),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth()
         ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(
+                    "ADD REAL ROUND RESULT",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
 
-            if (selectedSite.isEmpty()) {
+                Spacer(Modifier.height(12.dp))
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(22.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+                OutlinedTextField(
+                    value = input,
+                    onValueChange = { input = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Multiplier (ex: 2.45x)") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Decimal
+                    ),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = Red,
+                        unfocusedBorderColor = Color.Gray,
+                        focusedLabelColor = Red,
+                        unfocusedLabelColor = Color.LightGray
+                    )
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                Button(
+                    onClick = {
+                        val value = input
+                            .trim()
+                            .replace(",", ".")
+                            .removeSuffix("x")
+                            .toDoubleOrNull()
+
+                        if (value != null &&
+                            value.isFinite() &&
+                            value >= 1.0
+                        ) {
+                            history.add(value)
+                            input = ""
+                            analysis = "Vokatra voatahiry: ${
+                                String.format(
+                                    Locale.US,
+                                    "%.2fx",
+                                    value
+                                )
+                            }"
+                        } else {
+                            analysis =
+                                "Ampidiro multiplier valide, ohatra 2.45"
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Green
+                    )
                 ) {
-
-                    Text("✈", color = Red, fontSize = 65.sp)
-
-                    Text(
-                        "AVIATOR PREDICTOR",
-                        color = Red,
-                        fontSize = 25.sp,
-                        fontWeight = FontWeight.Black
-                    )
-
-                    Text(
-                        "DUAL PLATFORM ANALYZER",
-                        color = Color.LightGray
-                    )
-
-                    Spacer(Modifier.height(40.dp))
-
-                    Button(
-                        onClick = { selectedSite = "BET261" },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("AVIATOR BET261")
-                    }
-
-                    Spacer(Modifier.height(15.dp))
-
-                    Button(
-                        onClick = { selectedSite = "1WIN" },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("AVIATOR 1WIN")
-                    }
+                    Text("SAVE ROUND RESULT")
                 }
+            }
+        }
 
-            } else {
+        Spacer(Modifier.height(18.dp))
 
-                Column(
+        Text(
+            "STATISTICS",
+            color = Red,
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp
+        )
+
+        Spacer(Modifier.height(10.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            StatCard(
+                "ROUNDS",
+                history.size.toString(),
+                Modifier.weight(1f)
+            )
+            StatCard(
+                "AVERAGE",
+                if (history.isEmpty()) "--"
+                else String.format(Locale.US, "%.2fx", average),
+                Modifier.weight(1f)
+            )
+        }
+
+        Spacer(Modifier.height(10.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            StatCard(
+                "MEDIAN",
+                if (history.isEmpty()) "--"
+                else String.format(Locale.US, "%.2fx", median),
+                Modifier.weight(1f)
+            )
+            StatCard(
+                "LOW / HIGH",
+                "$low / $high",
+                Modifier.weight(1f)
+            )
+        }
+
+        Spacer(Modifier.height(18.dp))
+
+        Button(
+            onClick = {
+                analysis = if (history.isEmpty()) {
+                    "Tsy mbola misy historique azo dinihina."
+                } else {
+                    "Analyse de ${history.size} rounds vita. " +
+                    "Moyenne: ${
+                        String.format(Locale.US, "%.2fx", average)
+                    }. Médiane: ${
+                        String.format(Locale.US, "%.2fx", median)
+                    }. Ireo dia statistika taloha ihany, " +
+                    "fa tsy prédiction azo antoka."
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Red
+            )
+        ) {
+            Text("ANALYZE NEXT")
+        }
+
+        Spacer(Modifier.height(10.dp))
+
+        Text(
+            analysis,
+            color = Color.White,
+            fontSize = 13.sp
+        )
+
+        Spacer(Modifier.height(18.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                "ROUND HISTORY",
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+
+            TextButton(
+                onClick = {
+                    history.clear()
+                    analysis = "Historique voafafa."
+                }
+            ) {
+                Text("CLEAR", color = Red)
+            }
+        }
+
+        LazyColumn(
+            modifier = Modifier.weight(1f)
+        ) {
+            items(history.toList().asReversed()) { value ->
+                Text(
+                    String.format(Locale.US, "%.2fx", value),
+                    color = if (value >= 2.0) Green
+                    else Color.White,
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
+                        .fillMaxWidth()
+                        .padding(vertical = 7.dp)
+                )
+                HorizontalDivider(color = CardColor)
+            }
+        }
 
-                    Spacer(Modifier.height(25.dp))
+        Text(
+            "RNG: NEXT ROUND CANNOT BE KNOWN IN ADVANCE",
+            color = Color.Gray,
+            fontSize = 10.sp
+        )
+    }
+}
 
-                    Text(
-                        "$selectedSite AVIATOR",
-                        color = Red,
-                        fontSize = 25.sp,
-                        fontWeight = FontWeight.Black
-                    )
-
-                    Spacer(Modifier.height(25.dp))
-
-                    Text(
-                        latestResult,
-                        color = Color.White,
-                        fontSize = 52.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Text(
-                        "LAST RECEIVED RESULT",
-                        color = Color.Gray,
-                        fontSize = 11.sp
-                    )
-
-                    Spacer(Modifier.height(25.dp))
-
-                    Text(
-                        "ROOM CONNECTION",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    OutlinedTextField(
-                        value = roomCode,
-                        onValueChange = {
-                            roomCode = it.uppercase().take(6)
-                        },
-                        label = { Text("Room Code") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Spacer(Modifier.height(12.dp))
-
-                    Button(
-                        onClick = {
-
-                            message = "Connecting..."
-
-                            AuthManager.signIn { success, error ->
-
-                                if (!success) {
-                                    message = error ?: "Authentication failed"
-                                    return@signIn
-                                }
-
-                                RoomManager.createRoom(selectedSite) {
-                                    code, roomError ->
-
-                                    if (code == null) {
-                                        message = roomError ?: "Room creation failed"
-                                    } else {
-
-                                        roomCode = code
-
-                                        RoomManager.joinRoom(
-                                            selectedSite,
-                                            code
-                                        ) { joined, joinError ->
-
-                                            if (joined) {
-                                                DeviceManager.registerDevice(
-                                                    selectedSite,
-                                                    code,
-                                                    "Android device"
-                                                ) { registered, deviceError ->
-
-                                                    connected = registered
-                                                    message = if (registered) {
-                                                        "ROOM CREATED: $code"
-                                                    } else {
-                                                        deviceError ?: "Device registration failed"
-                                                    }
-                                                }
-                                            } else {
-                                                message = joinError ?: "Join failed"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF16A34A)
-                        )
-                    ) {
-                        Text("CREATE ROOM")
-                    }
-
-                    Spacer(Modifier.height(10.dp))
-
-                    Button(
-                        onClick = {
-
-                            if (roomCode.length != 6) {
-                                message = "Enter a valid 6-character code"
-                            } else {
-
-                                message = "Joining room..."
-
-                                AuthManager.signIn { success, error ->
-
-                                    if (!success) {
-                                        message = error ?: "Authentication failed"
-                                        return@signIn
-                                    }
-
-                                    RoomManager.joinRoom(
-                                        selectedSite,
-                                        roomCode
-                                    ) { joined, joinError ->
-
-                                        if (!joined) {
-                                            message = joinError ?: "Room not found"
-                                        } else {
-
-                                            DeviceManager.registerDevice(
-                                                selectedSite,
-                                                roomCode,
+@Composable
+fun StatCard(
+    title: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(
+            containerColor = CardColor
+        ),
+        shape = RoundedCornerShape(14.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp)
+        ) {
+            Text(
+                title,
+                color = Color.LightGray,
+                fontSize = 11.sp
+            )
+            Spacer(Modifier.height(7.dp))
+            Text(
+                value,
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+roomCode,
                                                 "Android device"
                                             ) { registered, deviceError ->
 
